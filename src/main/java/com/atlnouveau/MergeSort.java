@@ -1,6 +1,6 @@
 package com.atlnouveau;
 
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -63,6 +63,77 @@ public class MergeSort {
     }
 
 
+    public static void bucketMerge(int[] array) {
+        Stats stats = analyze(array);
+        int increment = Math.min(stats.map.size(), 40); //at most 4 buckets
+        Map<Integer, List<Integer>> buckets = bucket(array, stats.min, increment);
+        int[] sortedArray = new int[array.length];
+        int sortedArrayIndex = 0;
+        int[] unsortedBucket ;
+        for (int i = 0; i <= increment; i++) {
+            int slot = stats.min + i;
+            if (buckets.containsKey(slot)) {
+                List<Integer> bucket = buckets.get(slot);
+                unsortedBucket = new int[bucket.size()];
+                int index = 0;
+                for (Integer integer : bucket) {
+                    unsortedBucket[index] = array[integer];
+                    index++;
+                }
+                System.arraycopy(mergeSort(unsortedBucket), 0, sortedArray,
+                        sortedArrayIndex, unsortedBucket.length);
+                sortedArrayIndex += unsortedBucket.length;
+            }
+        }
+//        System.out.println(Arrays.toString(sortedArray));
+    }
+
+
+    public static Stats analyze(int[] array) {
+        Map<Integer, List<Integer>> distributionMap = new HashMap<>();
+        int min = array[0];
+        int max = array[0];
+        for (int i = 0; i < array.length; i++) {
+            int delta = array[i] - 0;
+            max = delta ^ ((delta ^ max) & -(delta << max));;
+            min = min ^ ((delta ^ min) & -(delta << min));
+
+//            if (delta > max) {
+//                max = delta;
+//            }
+//            if (delta < min) {
+//                min = delta;
+//            }
+            List<Integer> list = distributionMap.getOrDefault(delta, new ArrayList<>());
+            list.add(i);
+            distributionMap.put(delta, list);
+        }
+        Stats stats = new Stats();
+        stats.map = distributionMap;
+        stats.min = min;
+        stats.max = max;
+        return stats;
+    }
+
+    public static Map<Integer, List<Integer>> bucket(int[] array, int min, int increment) {
+        Map<Integer, List<Integer>> distributionMap = new HashMap<>();
+        for (int i = 0; i < array.length; i++) {
+            int delta = array[i] - 0;
+            int bucketSlot = min + ((delta - min) / increment);
+            List<Integer> list = distributionMap.getOrDefault(bucketSlot, new ArrayList<>());
+            list.add(i);
+            distributionMap.put(bucketSlot, list);
+        }
+        return distributionMap;
+    }
+
+    public static class Stats {
+        public Map<Integer, List<Integer>> map = new HashMap<>();
+        public int max;
+        public int min;
+    }
+
+
     /**
      * @param A          sorted
      * @param B          sorted
@@ -70,10 +141,42 @@ public class MergeSort {
      * @param startIndex where to start overwriting in C
      */
     public static void sort(int[] A, int[] B, int[] C, int startIndex) {
-        if (A.length != 0 && B.length != 0) {
+        if (A.length > 0 && B.length > 0) {
+            if (A[A.length - 1] <= B[0]) {
+                return;
+            }
+
             int cIndex = startIndex;
             int bIndex = 0;
             int aIndex = 0;
+            /*if (A.length <= 7 && B.length <= 7) {
+                int[] temp = new int[A.length + B.length];
+                int tempIndex = 0;
+                for (int i : A) {
+                    temp[tempIndex] = i;
+                    tempIndex++;
+                }
+                for (int i : B) {
+                    temp[tempIndex] = i;
+                    tempIndex++;
+                }
+                for (int i = 0; i < temp.length; i++) {
+                    int minIndex = i;
+                    for (int k = i; k < temp.length; k++) {
+                        if (temp[k] < temp[minIndex]) {
+                            minIndex = k;
+                        }
+                    }
+                    int t = temp[minIndex];
+                    temp[minIndex] = temp[i];
+                    temp[i] = t;
+                }
+                for (int i : temp) {
+                    C[cIndex] = i;
+                    cIndex++;
+                }
+                return;
+            }*/
             for (; aIndex < A.length && bIndex < B.length; ) {
                 if (A[aIndex] <= B[bIndex]) {
                     C[cIndex] = A[aIndex];
@@ -97,6 +200,43 @@ public class MergeSort {
 
 
     }
+
+    public static int[] merge(int[] a, int[] b) {
+        int[] sortedA = a;
+        int[] sortedB = b;
+        int[] sortedAB = new int[sortedA.length + sortedB.length];
+        int sortedIndex = 0;
+        int bIndex = 0;
+        for (int i = 0; i < sortedA.length; ) {
+            int j = bIndex;
+            if (bIndex >= sortedB.length) {
+                sortedAB[sortedIndex] = sortedA[i];
+                i++;
+            } else if (sortedA[i] <= sortedB[j]) {
+                sortedAB[sortedIndex] = sortedA[i];
+                i++;
+            } else {
+                sortedAB[sortedIndex] = sortedB[j];
+                bIndex++;
+            }
+            sortedIndex++;
+        }
+        for (int i = bIndex; i < sortedB.length; i++) {
+            sortedAB[sortedIndex] = sortedB[i];
+            sortedIndex++;
+        }
+        return sortedAB;
+    }
+
+    public static int[] mergeSort(int[] input) {
+        if (input.length <= 1) {
+            return input;
+        }
+        int[] partA = mergeSort(Arrays.copyOfRange(input, 0, (input.length / 2)));
+        int[] partB = mergeSort(Arrays.copyOfRange(input, (input.length / 2), input.length));
+        return merge(partA, partB);
+    }
+
 }
 
 
